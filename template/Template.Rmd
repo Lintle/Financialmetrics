@@ -1,0 +1,330 @@
+---
+title: 'A multivariate GARCH Model of real estate and investment trusts: Evidence
+  from South Africa and global markets'
+Author1: Lintle Balone
+BottomRFooter: \footnotesize Page \thepage\
+output:
+  pdf_document:
+    fig_height: 3.5
+    fig_width: 3.5
+    keep_tex: yes
+    template: Tex/TexDefault.txt
+  html_document: default
+HardSet_layout: yes
+JELCodes: L250 \sep L100
+Journal: Journal of Finance
+Ref1: Department of Economics, Stellenbosch University, Cape Town, South Africa
+RemovePreprintSubmittedTo: yes
+abstract: |
+  Using the high frequency data for five periods we examine the correlations between South African REITs and selected global countries. We study the various Reits companies of the Morgan Stanly Capital International (MSCI). Our analysis shows that South African reits are the least volatile stocks in relation to other stocks. Finally, there is strong evidence that South African reits and global reits have a low correlation, possibly increasing th benefits to portfolio diversification when the market is highly volatile. This is a very signifcant result and has not been explored in depth so far in South African context. These results will be useful in model building for prediction of price movement and portfolio management.
+  
+addfootrule: yes
+addtoprule: yes
+bibliography: Tex/ref.bib
+bottom: 2
+documentclass: elsarticle
+fontsize: 11pt
+keywords: Multivariate GARCH
+linenumbers: no
+linestretch: 1.2
+link-citations: yes
+margin: default
+numbersections: yes
+Email1: lintlebalone25\@gmail.com
+AddTitle: yes
+toc: false
+top: 2.5
+md_extensions M: NULL
+---
+
+<!-- First: Set your default preferences for chunk options: -->
+
+<!-- If you want a chunk's code to be printed, set echo = TRUE. message = FALSE stops R printing ugly package loading details in your final paper too. I also suggest setting warning = FALSE and checking for warnings in R, else you might find ugly warnings in your paper. -->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width = 6, fig.height = 5, fig.pos="H", fig.pos = 'H')
+# Note: Include = FALSE implies the code is executed, but not printed in your pdf.
+# warning and message = FALSE implies ugly messages and warnings are removed from your pdf. These should be picked up when you execute the command chunks (code sections below) in your rmd, not printed in your paper!
+
+```
+
+
+```{r Figure1, warning =  FALSE, fig.align = 'center', fig.cap = "Caption Here \\label{Figure1}", fig.ext = 'png', fig.height = 3, fig.width = 6}
+
+#------------------- Get the project's directory:
+WD <- getwd()
+
+#------------------- Source and load packages:
+source(file.path(WD, "code/LoadPackages.R"))
+LoadPackages()
+
+# Load Reits_Data using read_csv from readr package:
+dat <- readRDS(file.path(WD, "data/Reits.rds"))
+
+#------------------- Source and data create
+source( file.path(WD, "code/Data_Create.R") ) 
+
+#------------------- load clean data file
+clean_data <- read_csv( file.path(WD, "data/clean_data.csv") ) 
+
+#-------------------Codes----------------------
+source(file.path(WD, "code/Return_calculations.R"))
+
+
+#------------------- Format date 
+Year_Month <- function(x) format(as.Date(x), "%Y_%B")
+
+#------------------- gather columns
+Cols_to_Gather <- dat %>% select_if(is.numeric) %>% names
+
+
+
+```
+
+```{r}
+#------------------------Chosen Stocks------------------
+library(dplyr)
+summary <- psych::describeBy(clean_data$BDH_Value, clean_data$Name, mat = TRUE)
+
+top_n_limit <- 10
+
+hp <- summary %>% 
+  mutate(rank = mean %>% 
+           desc() %>% 
+           min_rank()) %>%
+  filter(rank <= top_n_limit) %>%
+  arrange(rank)
+hp <- hp$group1
+
+
+lower_n_limit <- 10
+
+lp <- summary %>% 
+  mutate(rank = mean %>%
+           min_rank()) %>%
+  filter(rank <= lower_n_limit) %>%
+  arrange(rank)
+lp <- lp$group1
+
+hp_stocks <- daily_rtn[daily_rtn$Name %in% hp,]
+lp_stocks <- daily_rtn[daily_rtn$Name %in% lp,]
+za_stocks <- daily_rtn %>% filter(Name == "MXZA0RL")
+Reits_Stocks <- rbind(hp_stocks, lp_stocks, za_stocks)
+
+
+
+```
+
+<!-- ############################## -->
+<!-- # Start Writing here: -->
+<!-- ############################## -->
+
+# Introduction \label{Introduction}
+
+Recently, the linkage between real estate investment and trusts (REITs) and finance has been a crucial field of interest, due to the increasing importance of property as a significant asset class in investment. This has been further enhanced by the economic condition of the United States relating to the systematic defaulting of subprime borrowers. Consequently, this has influenced how investors diversify their portfolios. Portfolio diversification means holding equities across various sectors [@stephensinter2017]. However; this paper will specifically analyses REITs returns between different countries. Real estate investment and trusts (REITs) returns have been significantly examined in the literature, however; reviews that have examined the REITs return comovements between South Africa and different countries are have not been explored in greater depth. Relatively, little research has been performed in the South African REITs compared to other REITs markets [@nurick2018investigation; @anderson2016place].
+
+The purpose of this paper is to analyze the co-movements and the portfolio diversification of the South African REITs and its trading partners. Furthermore, the Multivariate (MV) GARCH modelling is used to examine the conditional correlations between REITs in different countries. The rationale for multivariate (MV) GARCH modelling technique is for investors to include time-varying correlations in their portfolio selection, hence this paper explores their properties. The results offer valuable insights into which the South African REITs appear to provide better diversification. Secondly, the volatility plot indicates that South Africa has very low volatility compared to Indonesia, Thailand and Israel reits.
+
+The paper is structured as follows: Section \ref{Literature Review} presents the relevant literature. Section \ref{Data} discusses the data used in the paper and section \ref{Methodology} provides a comprehensive methodology employed in this paper. Section \ref{Results} presents the results of the estimated models. Section \ref{Conclusion} concludes. Lastly, section \ref{Appendix} presents the appendix.
+
+# Literature Review \label{Literature Review}
+
+The literature significant to this study focuses on South African and international Reits in the light of portfolio management. The driving factors cited in the literature for international investment are diversification and risk-adjusted-performance [@worzala1994overseas; @austin1995risk; @worzala2003investing]. This trade-off between risk and return is based on a conventional portfolio theory that prudent investors choose portfolios with the lowest risk for a specific level of return. In other words, diversification of portfolios creates incentives for risk reduction, such as diversification of real estate portfolios to include offshore investments without reducing returns [@austin1995risk]. It is also worth noting that, in portfolio theory, low correlations between dissimilar stocks will increase diversification potential and decrease portfolio risk [@stephensinter2017]. Put differently, the various types of investments should not follow the same pattern in the market. Therefore, the rewards of portfolio diversification weigh heavily on the correlation framework of the stock markets examined.
+
+@bruin2009real stated that in real estate investment, portfolio diversification benefits can be accomplished by diversifying across property types and geographical regions. It has been found that various forms of international real estate have weak correlations with other types of investment, hence contribute to a well-diversified portfolio. Moreover, the literature has well-documented evidence that there is a weak correlation between emerging markets and developed markets resulting in diversification benefits [@basu2005benefits; @barry1998performance; @magas2007changing]. However; the perception that there is a weak correlation between emerging markets and developed markets is deteriorating. For instance, @wong2004relationship examined the co-movement between stock markets in Asian emerging markets and developed countries using cointegration analysis. They found that there is an increasing correlation between most emerging and developed markets. @chancharat2007empirical employed cointegration and causality tests between major international stock markets and Thailand and found a high correlation between Thailand and other international markets. 
+
+The results of various studies on diversification of real estate are based on modern portfolio theory (MPT) [@paul1991risk; @seiler1999diversification; @wilson2003international]. However; @theron2018maximum stated that the Modern portfolio approach is rather flawed because it assumes all parameters are known accurately. These parameters (covariances, variances and expected returns) are estimated not necessarily known with certainty. As a result, this uncertainty in parameters leads to estimation risk, which in turn also leads to suboptimal investor financial choices. Modern portfolio theorem was also criticized for the inefficient performance of many institutional portfolios during the financial crisis of 2008/2009 because most portfolios were focused on Markowitz’s optimization of portfolios, a mechanism that was widely assumed would provide the necessary diversification to prevent seriously negative portfolios [@choueifaty2013properties]. Modern portfolio models also introduced assets with weak equity correlations, but most asset class correlations increased during the crisis and expected diversification benefits were negligible. Therefore, there is a need for alternative investment ideas. 
+
+In addition to these studies, some focus primarily on developed markets in the US, Canada, Europe and Japan, for instance [@bond2006performance; @basse2009reits; @moss2014asia]. @bond2006performance found that real estate has contributed substantially to the overall portfolio outcomes in terms of higher returns and decreases risk. Secondly, the authors are consistent with other researchers that real estate investment performs well during periods of market change. @basse2009reits found that investing in US REITs was riskier compared to investment in utility stocks. Further analysis linked this result to the economic state and financial crisis in the US. @moss2014asia examined the correlation between developed Asian REITs and other developed countries and found that there are interdependent linkages among the REITs market of developed countries.
+
+Certain literature studies analyze stock price linkages between emerging stock markets only, without capturing major stock influences in developed countries [@sharma2002long; @san2012malaysian; @yang2003stock]. Their findings suggest that Reits provided a better diversification post-financial crisis. @sharma2002long and @yang2003stock found low evidence of the correlation among Asian stock markets. Also, some studies analyses the interrelationships between developed and emerging markets. For instance, @pham2012dynamics examined the dynamics of returns and volatility in emerging and developed markets and found that correlations among emerging Reits are lower than those among developed countries.
+
+In investment of real estate, the advantages of portfolio diversification can be accomplished by introducing international real estate into the portfolio. @worzala2003investing found that with the introduction of international real estate to the portfolio, portfolio performance improves significantly. @worzala2003investing discovered that investment in securities linked to international real estate offers additional diversification advantages. Similarly, @niskanen2010reits claimed that international diversification of REITs investment is suggested to reduce exposure due to economic uncertainties within countries. Nonetheless, the question asked in this research is “are there any types of interdependence or dynamic correlation between South Africa and international markets?
+
+# Data \label{Data}
+
+The aim of this study is to investigate the correlation of the Reits market of South Africa and its trading partner countries to access the diversification benefits. The return series are time-varying, intradays as well as over days. In the light of this, it is undesirable to apply models assuming time-invariant conditional variances. 
+
+We picked a sample of 10 best performing stocks and 10 worst performing stocks,includsive of South Africa. This selection was made because an investor can reduce the overall risk of his or her portfolio by owning multiple Reits which perform differently. All data is obtained from Morgan Stanely Capital International (MSCI) and encompasses of high frequency data of different time frames. 
+
+The stock value indexes are expressed in US dollars to avoid exchange rates fluctuations. For further analysis, the continuously compounded daily returns are calculated by taking the log difference of each listed company as follows:
+
+\begin{align} 
+r_{ki,t} = \ln (\frac{P_{k,t}}{P_{k,t-7}})
+\label{eq1} \\ \notag 
+\end{align}
+
+Table \ref{tab1} shows all the tickers that have been used in this analysis. In Table \ref{tab2} it is reported that, daily mean returns were highest for the MXEU0RE index and lowest for the MXZA0RL with values of 9.872380 and -9.023962. During the period, daily returns for most indices are negatively skewed. The MMXWD0RE was the most negatively skewed with a skewness value of -0.611994373 indicating an extreme left tale. In addition to this, MXTHORL was the most positively skewed. Similarly, the daily returns for all indices exhibit excess positive kurtosis with MXMY0RL having the highest kurtosis. This is the distinct characteristic of financial data and suggests that the series is not normally distributed. 
+
+According to the normality test both daily returns and absolute returns are non normal for all indices. The null hypothesis of normality test was rejected for all indices. ^[We tested for normality using the Jarque-Bera normality test and the results indicate that the returns are not normally distributed.
+]. In Figure \ref{Figure3} we note that the return series appears to be nearly stable with an average return of approximately zero, however the variability of the data changes over time.
+
+<!-- The following is a code chunk. It must have its own unique name (after the r), or no name. After the comma follows commands for R which are self-explanatory. By default, the code and messages will not be printed in your pdf, just the output: -->
+
+#  Methodology
+
+The empirical analysis is undertaken using an MGARCH framework considering a stochastic process $y_t$, of a continuously compounded daily returns. The first step in this analysis is to obtain the GARCH estimates for the univirate volatility estimates fo each series. The study employs the GARCH(1,1) univariate specification. The standard GARCH(1,1) specification model is written in equation \ref{eq1} as follows:
+
+\begin{align}  
+y_t = \mu_t + \varepsilon_t \label{eq1} \\ \notag 
+    varepsilon_t = \sigma_t.z_t \\ \notag 
+  sigma_t^{2} = \alpha + \beta_1 e_{t-1}^2 + \beta_1          sigma_{t-1}^2 \\ \notag
+z_t \sim  N(0,I) \notag
+\end{align}
+
+The paper also employs the parsimonious DCC MV GARCH modelling techniques of [engle2002dynamic]. The DCC model provides an easy and parsimonious way of modeling multivariate volatility. The DCC model can be described as follows: 
+
+  \begin{equation} \label{eq2}
+H_t = D_t.R_t.D_t.\\ \notag
+\end{equation}
+
+The equation \ref{eq2} splits the variance covariance matrix into identical diagonal matrices and an estimate of time varying correlation. $R_t$ refers to time varying conditional correlations.
+
+The diagonal matrices are defined as:
+
+\begin {equation} \label {eq3}
+D_t = diag(h_t^{1/2}, h_t^{1/2}).
+ \end{equation}
+ 
+Then we define the dynamic conditional correlation structure. This is shown in \ref{eq4} below:
+
+\begin{align}  \label{eq4}
+Q_{ij,t} &= \bar Q + a\left(z_{t - 1}z'_{t - 1} - \bar{Q} \right) + b\left( Q_{ij, t - 1} - \bar{Q} \right) \hfill \\ \notag  &= (1 - a - b)\bar{Q} + az_{t - 1}z'_{t - 1} + b.Q_{ij, t - 1} \notag
+\end{align} 
+
+$Q_{ij,t}$ is the unconditional variance between series i and j. $\bar{Q}$ is the unconditional covarience between univariate series estimated in step 1. The non-negative parameters are represented by a and b and they must satisfy a + b < 1.
+
+Equation \ref{eq4} is employed in order to estimate $R_t$ as:
+
+\begin{align}\label{eq5}
+R_t &= diag(Q_t)^{-1/2}Q_t.diag(Q_t)^{-1/2}. 
+\end{align}
+
+Equation \ref{eq5} has bivariate elements that can be shown in the equation below.
+
+\begin{align} \label{eq6}
+R_t &= \rho_{ij,t} = \frac{q_{i,j,t}}{\sqrt{q_{ii,t}.q_{jj,t}}} 
+\end{align}
+
+Writing out a complete DCC model is then constructed as shown in \ref{eq7} below:
+
+\begin{align} \label{eq7}
+\varepsilon_t &\thicksim  N(0,D_t.R_t.D_t) \notag \\
+D_t^2 &\thicksim \text{Univariate GARCH(1,1) processes $\forall$ (i,j), i $\ne$ j} \notag \\
+z_t&=D_t^{-1}.\varepsilon_t \notag \\
+R_t &= Diag(Q_t^{-1}).Q_t.Diag({Q_t}^{-1}) \notag \\
+{Q}(1-a-b)+a(z_t'z_t)+b(Q_{t-1}) \notag \\
+\end{align}
+
+<!-- $$ -->
+<!-- This is a commented out section in the writing part. -->
+<!-- Comments are created by highlighting text, amnd pressing CTL+C -->
+<!-- \\begin{align} -->
+<!-- \\beta = \\alpha^2 -->
+<!-- \end{align} -->
+<!-- $$ -->
+
+# Results \label{Results}
+
+Section \ref{Standard Univariate GARCH(1,1) Model} discusses results of the standard univariate GARCH(1,1) model. Section \ref{The DCC Model} presents the results of the DCC model.
+
+## Standard Univariate GARCH(1,1) Model \label{Standard Univariate GARCH(1,1) Model}
+
+The graph below report Reits conditional volatility of the respective GARCH model. Volatility is the degree to which the trade price series varies over time. Even though volatility patterns look almost similar for all indices, differences between the volatility levels of indices can be seen. It is is evident from the graph that other stocks are highly volatile throughout the periods. Indonesia, Thailand and Israel real estate are amongst the higly volatile stocks. Indonesia real estate display the highest spikes upward compared to other reits in other periods such as . This is unsurprising because these are emerging coutries where returns are classified to be higly volatile in such regions. The graph also shows that South African reit index is the least volatily, therefore it results in lower expected losses.
+
+```{r }
+#-----------------Volatility Modeling############
+source(file.path(WD, "code/Volatility_Modelling.R"))
+```
+The findings in Table \ref{tab1} also show the volatality output of the reits indices measured by the standard deviation. Indonesia reits display the highest volatility amongst all the indices, however with one of the lowest daily returns. The MXWD0RE reits exhibits the lowest volatility amongst all the indiced. Moreover, it is apparent that one of the least volatile indices is the South Afican reit index which can offer valuable insights into diversification potential. Summing up, higher average returns are connected with larger risk exposure in Chinese real estate which coincides with the traditional asset pricing theory. 
+
+```{r vol.datplotReits, warning=FALSE, fig.align='center', fig.cap="Volatility of each asset \\label{Figure1}", fig.height=3, fig.width=8}
+
+TidyVol.dat <- Vol.dat %>% gather(Stocks, sigma, -date)
+      g5 <- ggplot(TidyVol.dat) + geom_line(aes(x = date, y = sigma, color = Stocks), size = 0.4)
+
+print(g5)
+
+```
+The next step is to fit our DCC model utilizing the residuals that we have obtained when fitting the GARCH model. The dynamic conditional correlations are shown in figure \ref{Figure2} below:
+
+## The DCC Model \label{The DCC Model}
+
+The time-varying correlation offers an insight into the underlying comovement structures of a portfolio [@katzke2019multivariate]. Basically the DCC-GARCH model estimates conditional volatilities and correlations in two steps [@saleem2011time]. It should be noted that the comovements between stocks is fundamental to investors and investment managers, as it provides valuable insights into proper diversification. If there is a high correlation between two stocks, then an investor is faced with low diversification.
+
+Firstly, we clean the daily returns by using the Boundt's technique. This is extremely crucial because it cleans outliers from the return data. Subsequently, we run the MV heteroskedasticity tests. The MARCH test indicates that all the MV portmanteau tests reject the null of no conditional heteroskedasticity, motivating our use of MVGARCH models.
+
+```{r DCC.plot, warning=FALSE, fig.align='center', fig.cap="Dynamic Conditional Correlations for Each Asset Relative to the SA Reits \\label{Figure2}", fig.height=5, fig.width=7}
+
+source( file.path(WD, "code/The_DCC_Model.R"))
+
+```
+In terms of the interpretation, the lower the dynamic correlations, the higher the diversification. This is because low correlation reduces the volatility of the portfolioas a whole. The results in \ref{Figure2} confirm that the conditional correlations of South Africa and global reits returns are highly dynamic and time varying. Moreover, it seems that the volatilities of SA reits and global reits comove together. From Figure \ref{Figure2} it is apparent that the correlations between MXZA0RL_MXEU0RE  and MXZA0RL_MXEM0RE are relatively low. These results are consistent with @basu2005benefits; @barry1998performance; @magas2007changing results that there is a weak correlation between emerging markets and developed markets resulting in diversification benefits. It is also evident that the correlation between MXZA0RL_M9WO0RE AND MXZA0RL_MXWO0RE reits is relatively high. 
+
+It is worth noting that the dynamic correlations make it clear that the diversifaction opportunities of the included REITS are not entirely constant over time. In conclusion, the results in figure \ref{Figure2} confirm that the conditional correlations of South African reits and global reits are dynamic and time varying.
+
+# Conclusion \label{conclusion}
+
+In this study we address one of the most important questions concerning conventional and morden portfolio management, i.e., the dynanmic conditional correlation between South African reits and global reits. Correlation of reits plays a fundamental role in asset allocation risk management and portfolio managed. Despite its significance this phenomena has been significantly neglected in ermeging markets regardless of their high returns and attractive potential for diversification. We have carried out an analysis of the Multivariate modelling for a period of five years. This time frame contains periods of small and large fluctuations and therefore provides a good example for understanding and examining the reits market behaviour. As expected, the financial data is not normally distributed and exhibit excess kurtios and skeweness.  
+
+The empirical results support the assumption of dynamic conditional correlations and there was evident evidence of time varying correlations between South Africa and global reits. Moreover, these correlation are very low, therefore, we believe our results can offer a comprehensive understanding of the dynamic correlations between South African reits and global reits in an emerging market setting which is valuable for financial researchers, international investors, investment managers and risk analysts. In a nutshell, South Africa can offer diversification opportunities to investors during high periods of volatility when stocks are extremely risky. Therefore, investors should invest in stocks that do not comove such as South Africa.
+
+# Appendix
+
+```{r ShortTable1, results = 'asis'}
+
+des_names <- c(" ", "Thailand", "China", "Germany", "EM Real Estate", "Hong Kong", "Israel", "EM Asia", "AC Pacific", "Singapore", "Thailand", "Indonesia", "World", "AC Asia ex Japan", "EM Real Estate", "EMU Real Estate", "Europe", "Indonesia", "Malaysia", "ACWI Index", "World", "South Africa")
+
+des_t <- cbind(colnames(Vol.dat), des_names)
+des_t <- des_t <- des_t[-c(1),]
+colnames(des_t) <- c("Ticker", "Description")
+
+table <- xtable(des_t, caption = "Asset description Table \\label{tab1}")
+  print.xtable(table, 
+             # tabular.environment = "longtable",
+             floating = TRUE,
+             table.placement = 'H', 
+             # scalebox = 0.4, 
+             comment = FALSE,
+             caption.placement = 'bottom'
+             )
+  
+```
+
+```{r ShortTable2, results = 'asis'}
+# STATISTICAL TABLE
+
+# Descriptive statistics
+des_table <- psych::describeBy(dlog$dlogret, dlog$Name, mat = TRUE)
+des_table$item <- NULL
+des_table$range <- NULL
+des_table$mad <- NULL
+des_table$n <- NULL
+table <- xtable(des_table, caption = "Descriptive Statistics Table \\label{tab2}")
+  print.xtable(table, 
+             # tabular.environment = "longtable",
+             floating = TRUE,
+             table.placement = 'H', 
+             # scalebox = 0, 
+             comment = FALSE,
+             caption.placement = 'bottom'
+             )
+
+```
+
+```{r figure3, warning =  FALSE, fig.align = 'center', fig.cap = "Daily log Reits Returns \\label{Figure3}", fig.ext = 'png', fig.height = 3, fig.width = 6}
+
+#Plotting returns graph for15 chosen stocks
+g2 <- 
+    ggplot(data = dlog) +
+    geom_line(aes(x = date, y = dlogret, color = Name), size = 1.3, alpha = 0.4) + 
+    theme_bw() + theme(legend.position = "right") + labs(title = "REITS Return Plot", caption = "Data was downloaded from Bloomberg") + scale_color_npg()
+  
+  print(g2)
+  
+
+
+  
+```
+
+# References
